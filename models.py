@@ -1,13 +1,11 @@
-from sqlalchemy import Column, Integer, String, DateTime
-from datetime import datetime
+from sqlalchemy import Column, Integer, String
 from database import Base
 
-class StudentAdmission(Base):
+class Admission(Base):
     __tablename__ = "admissions"
 
     id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String, nullable=False)
-    dob = Column(String, nullable=False)
-    gender = Column(String, nullable=False)
-    nationality = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    fullName = Column(String)
+    dob = Column(String)
+    gender = Column(String)
+    nationality = Column(String)
