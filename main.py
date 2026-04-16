@@ -1,70 +1,49 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from fastapi.middleware.cors import CORSMiddleware
 import models
-from database import engine, get_db
-from schemas import AdmissionCreate
+from database import engine, SessionLocal, get_db
+from pydantic import BaseModel
 
-# Database Tables create karna
+# Database tables create karne ke liye
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="School Admission System")
 
-# CORS: Frontend aur Backend ko connect karne ke liye zaroori hai
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], 
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# --- Health Check Routes (Leapcell Fix) ---
+@app.get("/kaithhealthcheck")
+@app.get("/kaithheathcheck")
+def health_check():
+    return {"status": "ok", "message": "Backend is live and healthy!"}
 
-@app.post("/submit-admission")
+# --- Pydantic Models (Data Validation) ---
+class AdmissionCreate(BaseModel):
+    student_name: str
+    father_name: str
+    grade: str
+    contact_number: str
+
+# --- API Endpoints ---
+
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the School Admission API", "docs": "/docs"}
+
+# Admission submit karne ka endpoint
+@app.post("/admissions/")
 def create_admission(admission: AdmissionCreate, db: Session = Depends(get_db)):
-    try:
-        new_student = models.StudentAdmission(
-            full_name=admission.fullName,
-            dob=admission.dob,
-            gender=admission.gender,
-            nationality=admission.nationality
-        )
-        db.add(new_student)
-        db.commit()
-        db.refresh(new_student)
-        return {"status": "success", "message": "Admission successful!", "id": new_student.id}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/students")
-def list_students(db: Session = Depends(get_db)):
-    return db.query(models.StudentAdmission).all()
-@app.delete("/students/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(models.StudentAdmission).filter(models.StudentAdmission.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    db.delete(student)
+    db_admission = models.Admission(
+        student_name=admission.student_name,
+        father_name=admission.father_name,
+        grade=admission.grade,
+        contact_number=admission.contact_number
+    )
+    db.add(db_admission)
     db.commit()
-    return {"message": "Deleted successfully"}
+    db.refresh(db_admission)
+    return {"message": "Admission submitted successfully", "data": db_admission}
 
-@app.put("/students/{student_id}")
-def update_student(student_id: int, updated_data: AdmissionCreate, db: Session = Depends(get_db)):
-    student_query = db.query(models.StudentAdmission).filter(models.StudentAdmission.id == student_id)
-    student = student_query.first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    student_query.update({
-        "full_name": updated_data.fullName,
-        "dob": updated_data.dob,
-        "gender": updated_data.gender,
-        "nationality": updated_data.nationality
-    })
-    db.commit()
-    return {"message": "Updated successfully"}
-
-if __name__ == "__main__":
-    import uvicorn
-    import os
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+# Tamam admissions dekhne ka endpoint
+@app.get("/admissions/")
+def get_all_admissions(db: Session = Depends(get_db)):
+    admissions = db.query(models.Admission).all()
+    return admissions
