@@ -3,11 +3,19 @@ from sqlalchemy.orm import Session
 import models
 from database import engine, SessionLocal, get_db
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 # Database tables create karne ke liye
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="School Admission System")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Iska matlab hai kisi bhi frontend ko allow karo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Health Check Routes (Leapcell Fix) ---
 @app.get("/kaithhealthcheck")
